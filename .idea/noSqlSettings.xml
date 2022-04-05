@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="NoSqlConfiguration">
+    <option name="serverConfigurations">
+      <list>
+        <ServerConfiguration>
+          <option name="authenticationSettings">
+            <AuthenticationSettings>
+              <option name="extras">
+                <map>
+                  <entry key="authDatabase" value="admin" />
+                  <entry key="ssl" value="false" />
+                </map>
+              </option>
+            </AuthenticationSettings>
+          </option>
+          <option name="label" value="shortentest" />
+          <option name="serverUrl" value="localhost:27017" />
+        </ServerConfiguration>
+      </list>
+    </option>
+  </component>
+</project>
