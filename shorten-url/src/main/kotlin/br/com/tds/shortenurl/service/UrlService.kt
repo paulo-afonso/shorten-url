@@ -2,18 +2,26 @@ package br.com.tds.shortenurl.service
 
 import br.com.tds.shortenurl.controller.dto.UrlFormDto
 import br.com.tds.shortenurl.controller.dto.UrlResponseDto
+import br.com.tds.shortenurl.exception.LinkExpiredException
+import br.com.tds.shortenurl.exception.LinkNotFoundException
 import br.com.tds.shortenurl.extensions.mapToResponseDto
 import br.com.tds.shortenurl.model.UrlModel
-import br.com.tds.shortenurl.repository.StatsRepository
 import br.com.tds.shortenurl.repository.UrlRepository
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
+import java.net.URI
 import java.time.LocalDateTime
+import javax.servlet.http.HttpServletResponse
 
 
 @Service
 class UrlService(
-    private var urlRepository: UrlRepository
+    private var urlRepository: UrlRepository,
+    @Autowired
+    private var statsService: StatsService
 ) {
 
     fun listing(): ResponseEntity<List<UrlModel>> {
@@ -21,14 +29,17 @@ class UrlService(
     }
 
 
-    fun getOriginalLink(shortUrl: String): String? {
+    fun getLinkAndCountAccess(shortUrl: String): ResponseEntity<String> {
+        val url = urlRepository.findByShortUrl(shortUrl) ?: throw LinkNotFoundException()
 
-        if (urlRepository.findByShortUrl(shortUrl)?.expirationDate!!.isBefore(LocalDateTime.now())) {
-            urlRepository.delete(urlRepository.findByShortUrl(shortUrl)!!)
-            return "Bad Request"
+        if (url.expirationDate!!.isBefore(LocalDateTime.now())) {
+            urlRepository.delete(url)
+            throw LinkExpiredException()
         }
 
-        return urlRepository.findByShortUrl(shortUrl)?.originalUrl
+        statsService.countAccess(shortUrl)
+        val originalUrl = url.originalUrl
+        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(originalUrl)).build()
     }
 
 
@@ -38,7 +49,6 @@ class UrlService(
             .map { allowedChars.random() }
             .joinToString("")
     }
-
 
     fun register(urlFormDto: UrlFormDto): ResponseEntity<UrlResponseDto> {
         val newEndpoint = genShortString()
